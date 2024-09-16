@@ -1,7 +1,15 @@
 [package]
 name = "markdown_minder"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+authors = ["Garret JH <dev@garretjames.com>"]
+description = "A CLI tool for saving content to markdown with YAML frontmatter support."
+license = "MIT"
+repository = "https://github.com/xeniode/markdown_minder"
+readme = "README.md"
+keywords = ["markdown", "cli", "yaml"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.3.0", features = ["derive"] }
+chrono = "0.4.38"

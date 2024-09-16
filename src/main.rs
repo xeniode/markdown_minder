@@ -2,8 +2,8 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use clap::Parser;
 use std::collections::HashMap;
-//use std::env;
 use std::path::PathBuf;
+use chrono::{Utc, SecondsFormat};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -12,9 +12,9 @@ struct Args {
     #[arg(short, long)]
     output: String,
 
-    /// Optional string argument
-    #[arg(short, long)]
-    string: Option<String>,
+    /// Title for the frontmatter
+    #[arg(long)]
+    title: Option<String>,
 
     /// Template file name for YAML frontmatter
     #[arg(long)]
@@ -23,6 +23,19 @@ struct Args {
     /// Frontmatter key-value pairs
     #[arg(long = "frontmatter", value_delimiter = ',', use_value_delimiter = true)]
     frontmatter: Option<Vec<String>>,
+
+    /// Tags for the frontmatter
+    #[arg(long = "tag")]
+    tags: Vec<String>,
+
+    /// ID for the frontmatter, set to the current Unix timestamp if --id-unix is used
+    #[arg(long)]
+    id: Option<String>,
+
+    /// Flag to set the ID to the current Unix timestamp
+    #[arg(long = "id-unix")]
+    id_unix: bool,
+
 }
 
 fn main() -> io::Result<()> {
@@ -37,6 +50,7 @@ fn main() -> io::Result<()> {
 
     // Initialize frontmatter HashMap
     let mut frontmatter = HashMap::new();
+
 
     // If a template is provided, parse its frontmatter
     if let Some(template_path) = &args.template {
@@ -55,14 +69,27 @@ fn main() -> io::Result<()> {
         }
     }
 
+    // Add title from --title flag to the frontmatter
+    if let Some(title) = &args.title {
+        frontmatter.insert("title".to_string(), title.clone());
+    }
+
+    // Set ID to the current Unix timestamp if --id-unix is used, otherwise use the provided ID
+    if args.id_unix {
+        let unix_timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        frontmatter.insert("id".to_string(), unix_timestamp);
+    } else if let Some(id) = &args.id {
+        frontmatter.insert("id".to_string(), id.clone());
+    }
+
+    // Add tags from --tag flags to the frontmatter
+    if !args.tags.is_empty() {
+        frontmatter.insert("tags".to_string(), args.tags.join(", "));
+    }
+
     // Serialize the updated frontmatter and prepend it to the content
     if !frontmatter.is_empty() {
         content = serialize_frontmatter(&frontmatter)? + &content;
-    }
-
-    // Add optional string argument as a title
-    if let Some(s) = &args.string {
-        content.push_str(&format!("# {}\n\n", s));
     }
 
     // Append the stdin buffer to the content
@@ -95,7 +122,13 @@ fn parse_frontmatter(template_content: &str) -> io::Result<HashMap<String, Strin
 fn serialize_frontmatter(frontmatter: &HashMap<String, String>) -> io::Result<String> {
     let mut frontmatter_string = String::from("---\n");
     for (key, value) in frontmatter {
-        frontmatter_string.push_str(&format!("{}: {}\n", key, value));
+        if key == "tags" {
+            // Serialize tags as a YAML list
+            let tags: Vec<String> = value.split(", ").map(|s| format!("- {}", s)).collect();
+            frontmatter_string.push_str(&format!("{}:\n{}\n", key, tags.join("\n")));
+        } else {
+            frontmatter_string.push_str(&format!("{}: {}\n", key, value));
+        }
     }
     frontmatter_string.push_str("---\n");
     Ok(frontmatter_string)
@@ -110,3 +143,4 @@ fn get_content_body(template_content: &str) -> String {
         String::new()
     }
 }
+
