@@ -1,7 +1,7 @@
 # README - markdown_minder
 
 `markdown_minder` is a simple command-line application written in Rust that processes Markdown files with optional YAML frontmatter.
-
+Find it on Crates.io - [Crates.io/markdown_minder](https://crates.io/crates/markdown_minder)
 ## Features
 
 - Save content from `stdin` to Markdown files
